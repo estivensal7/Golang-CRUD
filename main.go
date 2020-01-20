@@ -50,11 +50,18 @@ func main() {
 //'w http.ResponseWriter' is used to fill in the HTTP response
 //'r *http.Request' holds the request object
 func getBooks(w http.ResponseWriter, r *http.Request) {
+	
+	//setting the response's content type to json
+	w.Header().Set("Content-Type", "application/json")
 	log.Println("Get Books is called")
+	// An Encoder writes JSON values to an output stream.
 	json.NewEncoder(w).Encode(books)
+
 }
 
 func getBook(w http.ResponseWriter, r *http.Request) {
+
+	w.Header().Set("Content-Type", "application/json")
 	log.Println("Get Book is called")
 	//parameters can be used to create a map of route variables..
 	//which can be retrieved calling 'mux.Vars()'
@@ -70,10 +77,25 @@ func getBook(w http.ResponseWriter, r *http.Request) {
 			json.NewEncoder(w).Encode(&book)
 		}
 	}
+
 }
 
 func addBook(w http.ResponseWriter, r *http.Request) {
+
+	w.Header().Set("Content-Type", "application/json")
 	log.Println("Add Book is called")
+
+	//create a variable to hold an instance of the 'Book' struct
+	var book Book
+	// A Decoder reads and decodes JSON values from an input stream.
+	json.NewDecoder(r.Body).Decode(&book)
+
+	// setting books = the original books slice + the new book's values
+	books = append(books, book)
+
+	//returning a response containing all books
+	json.NewEncoder(w).Encode(books)
+	
 }
 
 func updateBook(w http.ResponseWriter, r *http.Request) {
