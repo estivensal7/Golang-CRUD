@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"github.com/gorilla/mux"
+	"strconv"
 )
 
 //book model
@@ -55,6 +56,20 @@ func getBooks(w http.ResponseWriter, r *http.Request) {
 
 func getBook(w http.ResponseWriter, r *http.Request) {
 	log.Println("Get Book is called")
+	//parameters can be used to create a map of route variables..
+	//which can be retrieved calling 'mux.Vars()'
+	params := mux.Vars(r)
+	log.Println(params)
+
+	// using the 'strconv' package convert the params id from 'str' to 'int'
+	i, _ := strconv.Atoi(params["id"])
+
+	//iterating through books to find the matching id numbers
+	for _, book := range books {
+		if book.ID == i {
+			json.NewEncoder(w).Encode(&book)
+		}
+	}
 }
 
 func addBook(w http.ResponseWriter, r *http.Request) {
