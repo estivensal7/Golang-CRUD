@@ -8,6 +8,9 @@ import (
 	"net/http"
 	"github.com/gorilla/mux"
 	"strconv"
+	// _ "database/sql"
+	// _ "github.com/lib/pq"
+	// _ "github.com/subosito/gotenv"
 )
 
 //book model
@@ -53,7 +56,7 @@ func getBooks(w http.ResponseWriter, r *http.Request) {
 	
 	//setting the response's content type to json
 	w.Header().Set("Content-Type", "application/json")
-	log.Println("Get Books is called")
+
 	// An Encoder writes JSON values to an output stream.
 	json.NewEncoder(w).Encode(books)
 
@@ -62,7 +65,7 @@ func getBooks(w http.ResponseWriter, r *http.Request) {
 func getBook(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
-	log.Println("Get Book is called")
+
 	//parameters can be used to create a map of route variables..
 	//which can be retrieved calling 'mux.Vars()'
 	params := mux.Vars(r)
@@ -83,7 +86,6 @@ func getBook(w http.ResponseWriter, r *http.Request) {
 func addBook(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
-	log.Println("Add Book is called")
 
 	//create a variable to hold an instance of the 'Book' struct
 	var book Book
@@ -101,7 +103,6 @@ func addBook(w http.ResponseWriter, r *http.Request) {
 func updateBook(w http.ResponseWriter, r *http.Request) {
 	
 	w.Header().Set("Content-Type", "application/json")
-	log.Println("Update Book is called")
 
 	//create a variable to hold an instance of the 'Book' struct
 	var book Book
@@ -124,7 +125,6 @@ func updateBook(w http.ResponseWriter, r *http.Request) {
 func deleteBook(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
-	log.Println("Delete Book is called")
 
 	//parameters can be used to create a map of route variables..
 	//which can be retrieved calling 'mux.Vars()'
