@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	// "fmt"
 	"log"
+	"os"
 	"net/http"
 	"github.com/gorilla/mux"
-	"strconv"
-	// _ "database/sql"
-	// _ "github.com/lib/pq"
-	// _ "github.com/subosito/gotenv"
+	// "strconv"
+	"database/sql"
+	"github.com/lib/pq"
+	"github.com/subosito/gotenv"
 )
 
 //book model
@@ -24,19 +25,39 @@ type Book struct {
 //the book slice will hold the book record that we are going to create
 var books []Book
 
+//variable declared to hold all sql.DB functions -- https://golang.org/pkg/database/sql/#DB
+var db *sql.DB
+
+func init() {
+	//loading all environment variables imported in this file
+	gotenv.Load()
+}
+
+// error handling function
+func logFatal(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 func main() {
+
+	// Grabbing the ELEPHANTSQL_URL from the .env file then parsing the URL value & setting it equal to the pgURL variable
+	pgUrl, err := pq.ParseURL(os.Getenv("ELEPHANTSQL_URL"))
+	logFatal(err)
+
+	//opening DB connection to pgUrl
+	db, err = sql.Open("postgres", pgUrl)
+	logFatal(err)
+
+	//db will ping the database - if there are no errors, it won't return anything - if there are any errors, the ping will fill the body of the variable below which we will then pass to the logFatal()
+	err = db.Ping()
+	logFatal(err)
+
 
 	//https://github.com/gorilla/mux#install
 	//implementing the mux request router
 	router := mux.NewRouter()
-
-	//appending data to the books slice
-	books = append(books,
-		Book{ID: 1, Title: "Golang pointers", Author: "Mr. Golang", Year: "2010"},
-		Book{ID: 2, Title: "Goroutines", Author: "Mr. Goroutine", Year: "2011"},
-		Book{ID: 3, Title: "Golang routers", Author: "Mr. Router", Year: "2012"},
-		Book{ID: 4, Title: "Golang concurrency", Author: "Mr. Currency", Year: "2013"},
-		Book{ID: 5, Title: "Golang good parts", Author: "Mr. Good", Year: "2014"})
 	
 	//creating routes for CRUD capabilities
 	router.HandleFunc("/books", getBooks).Methods("GET")
@@ -54,6 +75,30 @@ func main() {
 //'r *http.Request' holds the request object
 func getBooks(w http.ResponseWriter, r *http.Request) {
 
+	// creating an instance of the Book struct
+	var book Book
+
+	//asign an empty slice to the books variable
+	books = []Book{}
+
+	//invoke the db object Query method - passing in our query statement as well as assigning it to a rows variable. The 'err' body will fill if any errors are returned
+	rows, err := db.Query("SELECT * FROM books")
+	logFatal(err)
+	
+	//We are closing the connection after ensuring that the function call is performed
+	//Defer is used to ensure that a function call is performed later in a program’s execution, usually for purposes of cleanup.
+	defer rows.Close()
+
+	//iterating through the rows to map the values of each row to its corresponding key in the books slice based on the book struct 
+	//https://golang.org/pkg/database/sql/#Rows.Next
+	for rows.Next() {
+		err := rows. Scan(&book.ID, &book.Title, &book.Author, &book.Year)
+		logFatal(err)
+
+		books = append(books, book)
+	}
+
+	json.NewEncoder(w).Encode(books)
 }
 
 func getBook(w http.ResponseWriter, r *http.Request) {
