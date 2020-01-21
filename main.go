@@ -99,13 +99,46 @@ func getBooks(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(books)
+
 }
 
 func getBook(w http.ResponseWriter, r *http.Request) {
 
+	// creating an instance of the Book struct
+	var book Book
+
+	//invoke this method to grab the value of the params via mux
+	params := mux.Vars(r)
+
+	//structuring SQL Query ('$1' is a placeholder value) .. the real value will be passed by 'params["id"]'
+	rows := db.QueryRow("SELECT * FROM books WHERE id = $1", params["id"])
+
+	err := rows.Scan(&book.ID, &book.Title, &book.Author, &book.Year)
+	logFatal(err)
+
+	json.NewEncoder(w).Encode(books)
+
 }
 
 func addBook(w http.ResponseWriter, r *http.Request) {
+
+	// creating an instance of the Book struct
+	var book Book
+
+	// holding bookID after the new row is added to the db
+	var bookID int
+
+	//decoding the request body, and pointing it to the Book struct instance
+	json.NewDecoder(r.Body).Decode(&book)
+
+	//initiating CREATE query for db to create new row, then scan for the new id & point it to the Book struct instance
+	err := db.QueryRow(
+		"INSERT INTO books (title, author, year) VALUES($1, $2, $3) RETURNING id;", book.Title, book.Author, book.Year).Scan(&bookID)
+
+	//If there's any error - log the error
+	logFatal(err)
+
+	json.NewEncoder(w).Encode(bookID)
 
 }
 
