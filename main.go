@@ -53,92 +53,21 @@ func main() {
 //'w http.ResponseWriter' is used to fill in the HTTP response
 //'r *http.Request' holds the request object
 func getBooks(w http.ResponseWriter, r *http.Request) {
-	
-	//setting the response's content type to json
-	w.Header().Set("Content-Type", "application/json")
-
-	// An Encoder writes JSON values to an output stream.
-	json.NewEncoder(w).Encode(books)
 
 }
 
 func getBook(w http.ResponseWriter, r *http.Request) {
 
-	w.Header().Set("Content-Type", "application/json")
-
-	//parameters can be used to create a map of route variables..
-	//which can be retrieved calling 'mux.Vars()'
-	params := mux.Vars(r)
-	log.Println(params)
-
-	// using the 'strconv' package convert the params id from 'str' to 'int'
-	i, _ := strconv.Atoi(params["id"])
-
-	//iterating through books to find the matching id numbers
-	for _, book := range books {
-		if book.ID == i {
-			json.NewEncoder(w).Encode(&book)
-		}
-	}
-
 }
 
 func addBook(w http.ResponseWriter, r *http.Request) {
 
-	w.Header().Set("Content-Type", "application/json")
-
-	//create a variable to hold an instance of the 'Book' struct
-	var book Book
-	// A Decoder reads and decodes JSON values from an input stream. '&book' points the decoded response to the book variable
-	json.NewDecoder(r.Body).Decode(&book)
-
-	// setting books = the original books slice + the new book's values
-	books = append(books, book)
-
-	//returning a response containing all books
-	json.NewEncoder(w).Encode(books)
-
 }
 
 func updateBook(w http.ResponseWriter, r *http.Request) {
-	
-	w.Header().Set("Content-Type", "application/json")
-
-	//create a variable to hold an instance of the 'Book' struct
-	var book Book
-
-	// A Decoder reads and decodes JSON values from an input stream. '&book' points the decoded response to the book variable
-	json.NewDecoder(r.Body).Decode(&book)
-
-	//iterating through books slice to find the matching book, then updating that book's values based on the UPDATE
-	for i, item := range books {
-		if item.ID == book.ID {
-			books[i] = book
-		}
-	}
-
-	//returning a response containing all books
-	json.NewEncoder(w).Encode(books)
 
 }
 
 func deleteBook(w http.ResponseWriter, r *http.Request) {
 
-	w.Header().Set("Content-Type", "application/json")
-
-	//parameters can be used to create a map of route variables..
-	//which can be retrieved calling 'mux.Vars()'
-	params := mux.Vars(r)
-
-	// using the 'strconv' package convert the params id from 'str' to 'int'
-	id, _ := strconv.Atoi(params["id"])
-
-	//iterating through books to find the matching id numbers
-	for i, item := range books {
-		if item.ID == id {
-			books = append(books[:i], books[i+1:]...)
-		}
-	}
-	
-	json.NewEncoder(w).Encode(books)
 }
