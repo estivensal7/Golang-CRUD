@@ -144,8 +144,45 @@ func addBook(w http.ResponseWriter, r *http.Request) {
 
 func updateBook(w http.ResponseWriter, r *http.Request) {
 
+	//new comment just for demonstration of pull request
+
+	// creating an instance of the Book struct
+	var book Book
+
+	//decoding the request body, and pointing it to the Book struct instance
+	json.NewDecoder(r.Body).Decode(&book)
+
+	//structuring UPDATE query - expecting 2 values
+	result, err := db.Exec("UPDATE books SET title=$1, author=$2, year=$3 where id=$4 RETURNING id",
+	&book.Title, &book.Author, &book.Year, &book.ID)
+
+	//how many rows have been updated? - any errors?
+	rowsUpdated, err := result.RowsAffected()
+
+	//logging any errors
+	logFatal(err)
+
+	json.NewEncoder(w).Encode(rowsUpdated)
+
 }
 
 func deleteBook(w http.ResponseWriter, r *http.Request) {
+
+	//invoke this method to grab the value of the params via mux
+	params := mux.Vars(r)
+
+	//structuring DELETE query - expecting 2 values
+	result, err := db. Exec("DELETE FROM books WHERE id=$1", params["id"])
+
+	//logging any errors
+	logFatal(err)
+
+	//how many rows have been deleted? - any errors?
+	rowsDeleted, err := result.RowsAffected()
+
+	//logging any errors
+	logFatal(err)
+
+	json.NewEncoder(w).Encode(rowsDeleted)
 
 }
