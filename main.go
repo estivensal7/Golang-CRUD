@@ -3,7 +3,7 @@ package main
 //imported packages
 import (
 	"encoding/json"
-	// "fmt"
+	"fmt"
 	"log"
 	"os"
 	"net/http"
@@ -67,6 +67,7 @@ func main() {
 	router.HandleFunc("/books/{id}", deleteBook).Methods("DELETE")
 
 	//starting our server
+	fmt.Println("Server is running on PORT 3000")
 	log.Fatal(http.ListenAndServe(":3000", router))
 }
 
