@@ -2,28 +2,20 @@ package main
 
 //imported packages
 import (
-	"encoding/json"
-	"fmt"
-	"log"
-	"os"
-	"net/http"
-	"github.com/gorilla/mux"
-	// "strconv"
 	"database/sql"
-	"github.com/lib/pq"
+	"encoding/json"
+	"log"
+	"net/http"
+	"fmt"
+
+	"Golang-CRUD/driver"
+	"Golang-CRUD/models"
+	"github.com/gorilla/mux"
 	"github.com/subosito/gotenv"
 )
 
-//book model
-type Book struct {
-	ID int `json:id`
-	Title string `json:title`
-	Author string `json:author`
-	Year string `json:year`
-}
-
 //the book slice will hold the book record that we are going to create
-var books []Book
+var books []models.Book
 
 //variable declared to hold all sql.DB functions -- https://golang.org/pkg/database/sql/#DB
 var db *sql.DB
@@ -42,18 +34,8 @@ func logFatal(err error) {
 
 func main() {
 
-	// Grabbing the ELEPHANTSQL_URL from the .env file then parsing the URL value & setting it equal to the pgURL variable
-	pgUrl, err := pq.ParseURL(os.Getenv("ELEPHANTSQL_URL"))
-	logFatal(err)
-
-	//opening DB connection to pgUrl
-	db, err = sql.Open("postgres", pgUrl)
-	logFatal(err)
-
-	//db will ping the database - if there are no errors, it won't return anything - if there are any errors, the ping will fill the body of the variable below which we will then pass to the logFatal()
-	err = db.Ping()
-	logFatal(err)
-
+	//initializing db variable to call on driver package and connect to db
+	db = driver.ConnectDB()
 
 	//https://github.com/gorilla/mux#install
 	//implementing the mux request router
@@ -77,10 +59,10 @@ func main() {
 func getBooks(w http.ResponseWriter, r *http.Request) {
 
 	// creating an instance of the Book struct
-	var book Book
+	var book models.Book
 
 	//asign an empty slice to the books variable
-	books = []Book{}
+	books = []models.Book{}
 
 	//invoke the db object Query method - passing in our query statement as well as assigning it to a rows variable. The 'err' body will fill if any errors are returned
 	rows, err := db.Query("SELECT * FROM books")
@@ -106,7 +88,7 @@ func getBooks(w http.ResponseWriter, r *http.Request) {
 func getBook(w http.ResponseWriter, r *http.Request) {
 
 	// creating an instance of the Book struct
-	var book Book
+	var book models.Book
 
 	//invoke this method to grab the value of the params via mux
 	params := mux.Vars(r)
@@ -124,7 +106,7 @@ func getBook(w http.ResponseWriter, r *http.Request) {
 func addBook(w http.ResponseWriter, r *http.Request) {
 
 	// creating an instance of the Book struct
-	var book Book
+	var book models.Book
 
 	// holding bookID after the new row is added to the db
 	var bookID int
@@ -146,7 +128,7 @@ func addBook(w http.ResponseWriter, r *http.Request) {
 func updateBook(w http.ResponseWriter, r *http.Request) {
 
 	// creating an instance of the Book struct
-	var book Book
+	var book models.Book
 
 	//decoding the request body, and pointing it to the Book struct instance
 	json.NewDecoder(r.Body).Decode(&book)
