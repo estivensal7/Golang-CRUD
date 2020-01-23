@@ -144,8 +144,6 @@ func addBook(w http.ResponseWriter, r *http.Request) {
 
 func updateBook(w http.ResponseWriter, r *http.Request) {
 
-	//new comment just for demonstration of pull request
-
 	// creating an instance of the Book struct
 	var book Book
 
