@@ -5,9 +5,13 @@ import (
 	"encoding/json"
 	// "fmt"
 	"log"
+	"os"
 	"net/http"
 	"github.com/gorilla/mux"
-	"strconv"
+	// "strconv"
+	"database/sql"
+	"github.com/lib/pq"
+	"github.com/subosito/gotenv"
 )
 
 //book model
@@ -21,19 +25,39 @@ type Book struct {
 //the book slice will hold the book record that we are going to create
 var books []Book
 
+//variable declared to hold all sql.DB functions -- https://golang.org/pkg/database/sql/#DB
+var db *sql.DB
+
+func init() {
+	//loading all environment variables imported in this file
+	gotenv.Load()
+}
+
+// error handling function
+func logFatal(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 func main() {
+
+	// Grabbing the ELEPHANTSQL_URL from the .env file then parsing the URL value & setting it equal to the pgURL variable
+	pgUrl, err := pq.ParseURL(os.Getenv("ELEPHANTSQL_URL"))
+	logFatal(err)
+
+	//opening DB connection to pgUrl
+	db, err = sql.Open("postgres", pgUrl)
+	logFatal(err)
+
+	//db will ping the database - if there are no errors, it won't return anything - if there are any errors, the ping will fill the body of the variable below which we will then pass to the logFatal()
+	err = db.Ping()
+	logFatal(err)
+
 
 	//https://github.com/gorilla/mux#install
 	//implementing the mux request router
 	router := mux.NewRouter()
-
-	//appending data to the books slice
-	books = append(books,
-		Book{ID: 1, Title: "Golang pointers", Author: "Mr. Golang", Year: "2010"},
-		Book{ID: 2, Title: "Goroutines", Author: "Mr. Goroutine", Year: "2011"},
-		Book{ID: 3, Title: "Golang routers", Author: "Mr. Router", Year: "2012"},
-		Book{ID: 4, Title: "Golang concurrency", Author: "Mr. Currency", Year: "2013"},
-		Book{ID: 5, Title: "Golang good parts", Author: "Mr. Good", Year: "2014"})
 	
 	//creating routes for CRUD capabilities
 	router.HandleFunc("/books", getBooks).Methods("GET")
@@ -50,95 +74,113 @@ func main() {
 //'w http.ResponseWriter' is used to fill in the HTTP response
 //'r *http.Request' holds the request object
 func getBooks(w http.ResponseWriter, r *http.Request) {
+
+	// creating an instance of the Book struct
+	var book Book
+
+	//asign an empty slice to the books variable
+	books = []Book{}
+
+	//invoke the db object Query method - passing in our query statement as well as assigning it to a rows variable. The 'err' body will fill if any errors are returned
+	rows, err := db.Query("SELECT * FROM books")
+	logFatal(err)
 	
-	//setting the response's content type to json
-	w.Header().Set("Content-Type", "application/json")
-	log.Println("Get Books is called")
-	// An Encoder writes JSON values to an output stream.
+	//We are closing the connection after ensuring that the function call is performed
+	//Defer is used to ensure that a function call is performed later in a program’s execution, usually for purposes of cleanup.
+	defer rows.Close()
+
+	//iterating through the rows to map the values of each row to its corresponding key in the books slice based on the book struct 
+	//https://golang.org/pkg/database/sql/#Rows.Next
+	for rows.Next() {
+		err := rows. Scan(&book.ID, &book.Title, &book.Author, &book.Year)
+		logFatal(err)
+
+		books = append(books, book)
+	}
+
 	json.NewEncoder(w).Encode(books)
 
 }
 
 func getBook(w http.ResponseWriter, r *http.Request) {
 
-	w.Header().Set("Content-Type", "application/json")
-	log.Println("Get Book is called")
-	//parameters can be used to create a map of route variables..
-	//which can be retrieved calling 'mux.Vars()'
+	// creating an instance of the Book struct
+	var book Book
+
+	//invoke this method to grab the value of the params via mux
 	params := mux.Vars(r)
-	log.Println(params)
 
-	// using the 'strconv' package convert the params id from 'str' to 'int'
-	i, _ := strconv.Atoi(params["id"])
+	//structuring SQL Query ('$1' is a placeholder value) .. the real value will be passed by 'params["id"]'
+	rows := db.QueryRow("SELECT * FROM books WHERE id = $1", params["id"])
 
-	//iterating through books to find the matching id numbers
-	for _, book := range books {
-		if book.ID == i {
-			json.NewEncoder(w).Encode(&book)
-		}
-	}
+	err := rows.Scan(&book.ID, &book.Title, &book.Author, &book.Year)
+	logFatal(err)
+
+	json.NewEncoder(w).Encode(books)
 
 }
 
 func addBook(w http.ResponseWriter, r *http.Request) {
 
-	w.Header().Set("Content-Type", "application/json")
-	log.Println("Add Book is called")
-
-	//create a variable to hold an instance of the 'Book' struct
+	// creating an instance of the Book struct
 	var book Book
-	// A Decoder reads and decodes JSON values from an input stream. '&book' points the decoded response to the book variable
+
+	// holding bookID after the new row is added to the db
+	var bookID int
+
+	//decoding the request body, and pointing it to the Book struct instance
 	json.NewDecoder(r.Body).Decode(&book)
 
-	// setting books = the original books slice + the new book's values
-	books = append(books, book)
+	//initiating CREATE query for db to create new row, then scan for the new id & point it to the Book struct instance
+	err := db.QueryRow(
+		"INSERT INTO books (title, author, year) VALUES($1, $2, $3) RETURNING id;", book.Title, book.Author, book.Year).Scan(&bookID)
 
-	//returning a response containing all books
-	json.NewEncoder(w).Encode(books)
+	//If there's any error - log the error
+	logFatal(err)
+
+	json.NewEncoder(w).Encode(bookID)
 
 }
 
 func updateBook(w http.ResponseWriter, r *http.Request) {
-	
-	w.Header().Set("Content-Type", "application/json")
-	log.Println("Update Book is called")
 
-	//create a variable to hold an instance of the 'Book' struct
+	// creating an instance of the Book struct
 	var book Book
 
-	// A Decoder reads and decodes JSON values from an input stream. '&book' points the decoded response to the book variable
+	//decoding the request body, and pointing it to the Book struct instance
 	json.NewDecoder(r.Body).Decode(&book)
 
-	//iterating through books slice to find the matching book, then updating that book's values based on the UPDATE
-	for i, item := range books {
-		if item.ID == book.ID {
-			books[i] = book
-		}
-	}
+	//structuring UPDATE query - expecting 2 values
+	result, err := db.Exec("UPDATE books SET title=$1, author=$2, year=$3 where id=$4 RETURNING id",
+	&book.Title, &book.Author, &book.Year, &book.ID)
 
-	//returning a response containing all books
-	json.NewEncoder(w).Encode(books)
+	//how many rows have been updated? - any errors?
+	rowsUpdated, err := result.RowsAffected()
+
+	//logging any errors
+	logFatal(err)
+
+	json.NewEncoder(w).Encode(rowsUpdated)
 
 }
 
 func deleteBook(w http.ResponseWriter, r *http.Request) {
 
-	w.Header().Set("Content-Type", "application/json")
-	log.Println("Delete Book is called")
-
-	//parameters can be used to create a map of route variables..
-	//which can be retrieved calling 'mux.Vars()'
+	//invoke this method to grab the value of the params via mux
 	params := mux.Vars(r)
 
-	// using the 'strconv' package convert the params id from 'str' to 'int'
-	id, _ := strconv.Atoi(params["id"])
+	//structuring DELETE query - expecting 2 values
+	result, err := db. Exec("DELETE FROM books WHERE id=$1", params["id"])
 
-	//iterating through books to find the matching id numbers
-	for i, item := range books {
-		if item.ID == id {
-			books = append(books[:i], books[i+1:]...)
-		}
-	}
-	
-	json.NewEncoder(w).Encode(books)
+	//logging any errors
+	logFatal(err)
+
+	//how many rows have been deleted? - any errors?
+	rowsDeleted, err := result.RowsAffected()
+
+	//logging any errors
+	logFatal(err)
+
+	json.NewEncoder(w).Encode(rowsDeleted)
+
 }
