@@ -26,7 +26,7 @@ func SendError(w http.ResponseWriter, status int, err models.Error) {
 //here we take 2 parameters
 // -the ResponseWriter handles our response that's associated with the request
 // -the data parameter will be of type - interface - because we don't want to be strict on the type of data that we will expect to be returned --- https://medium.com/rungo/interfaces-in-go-ab1601159b3a
-func SendSuccess() {
+func SendSuccess(w http.ResponseWriter, data interface{}) {
 	
 	//encoding response data
 	json.NewEncoder(w).Encode(data)

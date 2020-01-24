@@ -10,6 +10,7 @@ import (
 
 	"Golang-CRUD/driver"
 	"Golang-CRUD/models"
+	"Golang-CRUD/controllers"
 	"github.com/gorilla/mux"
 	"github.com/subosito/gotenv"
 )
@@ -37,12 +38,15 @@ func main() {
 	//initializing db variable to call on driver package and connect to db
 	db = driver.ConnectDB()
 
+	//invoking our Controllers' methods
+	controller := controllers.Controller{}
+
 	//https://github.com/gorilla/mux#install
 	//implementing the mux request router
 	router := mux.NewRouter()
 	
 	//creating routes for CRUD capabilities
-	router.HandleFunc("/books", getBooks).Methods("GET")
+	router.HandleFunc("/books", controller.GetBooks(db)).Methods("GET")
 	router.HandleFunc("/books/{id}", getBook).Methods("GET")
 	router.HandleFunc("/books", addBook).Methods("POST")
 	router.HandleFunc("/books", updateBook).Methods("PUT")
@@ -51,38 +55,6 @@ func main() {
 	//starting our server
 	fmt.Println("Server is running on PORT 3000")
 	log.Fatal(http.ListenAndServe(":3000", router))
-}
-
-//the getBooks func takes two parameters ---
-//'w http.ResponseWriter' is used to fill in the HTTP response
-//'r *http.Request' holds the request object
-func getBooks(w http.ResponseWriter, r *http.Request) {
-
-	// creating an instance of the Book struct
-	var book models.Book
-
-	//asign an empty slice to the books variable
-	books = []models.Book{}
-
-	//invoke the db object Query method - passing in our query statement as well as assigning it to a rows variable. The 'err' body will fill if any errors are returned
-	rows, err := db.Query("SELECT * FROM books")
-	logFatal(err)
-	
-	//We are closing the connection after ensuring that the function call is performed
-	//Defer is used to ensure that a function call is performed later in a program’s execution, usually for purposes of cleanup.
-	defer rows.Close()
-
-	//iterating through the rows to map the values of each row to its corresponding key in the books slice based on the book struct 
-	//https://golang.org/pkg/database/sql/#Rows.Next
-	for rows.Next() {
-		err := rows. Scan(&book.ID, &book.Title, &book.Author, &book.Year)
-		logFatal(err)
-
-		books = append(books, book)
-	}
-
-	json.NewEncoder(w).Encode(books)
-
 }
 
 func getBook(w http.ResponseWriter, r *http.Request) {
